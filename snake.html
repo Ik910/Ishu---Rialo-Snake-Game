@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Game: Dark Grey Body, Custom BG</title>
+  <style>
+    body { background: #f6f1e7; font-family: Arial, sans-serif; text-align: center; margin: 0;}
+    #score { font-size: 2em; margin-top: 20px; margin-bottom: 10px; color: #222; }
+    canvas { border: 2px solid #222; display: block; margin: 0 auto; }
+    #gameover { font-size: 2em; color: #c00; margin-top: 15px; display: none; }
+    #startMsg { font-size: 1.3em; color: #333; margin-top: 15px;}
+    #restart { padding: 10px 20px; font-size: 1.1em; background: #222; color: #fff; border: none; border-radius: 6px; margin-top: 10px; display: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <canvas id="gameCanvas" width="420" height="420"></canvas>
+  <div id="startMsg">Press Arrow Key to Start!</div>
+  <div id="gameover">Game Over!</div>
+  <button id="restart">Restart</button>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 20, tileCount = canvas.width / gridSize;
+
+    let snake = [
+      {x: 7, y: 10}, {x: 6, y: 10}, {x: 5, y: 10},
+      {x: 4, y: 10}, {x: 3, y: 10}, {x: 2, y: 10}
+    ];
+    let velocity = {x: 1, y: 0};
+    let food = {x: 12, y: 10};
+    let score = 0, gameInterval, gameRunning = false;
+    let logoImg = new Image(); logoImg.src = "logo.jpg";
+    let bgImg = new Image(); bgImg.src = "bg.jpg"; // Change to your background image
+
+    const scoreDisplay = document.getElementById('score');
+    const gameoverDisplay = document.getElementById('gameover');
+    const restartButton = document.getElementById('restart');
+    const startMsg = document.getElementById('startMsg');
+
+    // New color for body is dark grey
+    const darkGrey = "#444";
+
+    function randomTile() {
+      return Math.floor(Math.random() * tileCount);
+    }
+    function placeFood() {
+      let newFood;
+      do { newFood = {x: randomTile(), y: randomTile()}; }
+      while (snake.some(seg => seg.x === newFood.x && seg.y === newFood.y));
+      food = newFood;
+    }
+    function drawSnake() {
+      for (let i = 0; i < snake.length; i++) {
+        let centerX = snake[i].x * gridSize + gridSize / 2;
+        let centerY = snake[i].y * gridSize + gridSize / 2;
+        ctx.beginPath();
+        if (i === 0) {
+          // Head
+          ctx.fillStyle = "#18b218";
+          ctx.arc(centerX, centerY, gridSize / 2 - 1, 0, 2 * Math.PI);
+          ctx.fill();
+          // Eyes (white with black centers)
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(centerX - gridSize * 0.15, centerY - gridSize * 0.13, gridSize * 0.12, 0, 2 * Math.PI);
+          ctx.arc(centerX + gridSize * 0.15, centerY - gridSize * 0.13, gridSize * 0.12, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = "#222";
+          ctx.beginPath();
+          ctx.arc(centerX - gridSize * 0.15, centerY - gridSize * 0.13, gridSize * 0.05, 0, 2 * Math.PI);
+          ctx.arc(centerX + gridSize * 0.15, centerY - gridSize * 0.13, gridSize * 0.05, 0, 2 * Math.PI);
+          ctx.fill();
+        } else if (i === snake.length - 1) {
+          // Tail grey
+          ctx.fillStyle = "#bbb";
+          ctx.arc(centerX, centerY, gridSize / 2 - 1, 0, 2 * Math.PI);
+          ctx.fill();
+        } else {
+          // Body (dark grey)
+          ctx.fillStyle = darkGrey;
+          ctx.arc(centerX, centerY, gridSize / 2 - 1, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+    }
+    function drawLogoFood() {
+      if (logoImg.complete && logoImg.naturalWidth > 0) {
+        ctx.drawImage(logoImg, food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+      } else {
+        ctx.fillStyle = "#29a845";
+        ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+      }
+    }
+    function draw() {
+      // Draw background image, fallback to white if not loaded
+      if (bgImg.complete && bgImg.naturalWidth > 0) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      drawSnake();
+      drawLogoFood();
+    }
+    function update() {
+      const newHead = {x: snake[0].x + velocity.x, y: snake[0].y + velocity.y};
+      if (
+        newHead.x < 0 || newHead.x >= tileCount ||
+        newHead.y < 0 || newHead.y >= tileCount ||
+        snake.some(seg => seg.x === newHead.x && seg.y === newHead.y)
+      ) { endGame(); return; }
+      snake.unshift(newHead);
+      if (newHead.x === food.x && newHead.y === food.y) {
+        score++; scoreDisplay.textContent = "Score: " + score; placeFood();
+      } else { snake.pop(); }
+      draw();
+    }
+    function endGame() {
+      clearInterval(gameInterval); gameRunning = false;
+      gameoverDisplay.style.display = 'block'; restartButton.style.display = 'inline-block';
+    }
+    function resetGame() {
+      snake = [
+        {x: 7, y: 10}, {x: 6, y: 10}, {x: 5, y: 10},
+        {x: 4, y: 10}, {x: 3, y: 10}, {x: 2, y: 10}
+      ];
+      velocity = {x: 1, y: 0}; score = 0; gameRunning = false;
+      scoreDisplay.textContent = "Score: 0";
+      gameoverDisplay.style.display = 'none'; restartButton.style.display = 'none';
+      startMsg.style.display = 'block'; placeFood(); draw();
+      if (gameInterval) clearInterval(gameInterval);
+    }
+    document.addEventListener('keydown', e => {
+      if (!gameRunning) {
+        startMsg.style.display = 'none';
+        gameRunning = true;
+        gameInterval = setInterval(update, 120);
+      }
+      switch (e.key) {
+        case 'ArrowLeft': case 'a': if (velocity.x !== 1) velocity = {x: -1, y: 0}; break;
+        case 'ArrowUp': case 'w': if (velocity.y !== 1) velocity = {x: 0, y: -1}; break;
+        case 'ArrowRight': case 'd': if (velocity.x !== -1) velocity = {x: 1, y: 0}; break;
+        case 'ArrowDown': case 's': if (velocity.y !== -1) velocity = {x: 0, y: 1}; break;
+      }
+    });
+    restartButton.addEventListener('click', resetGame);
+    logoImg.onload = resetGame;
+    bgImg.onload = draw;
+    if (logoImg.complete && logoImg.naturalWidth !== 0) resetGame();
+    if (bgImg.complete && bgImg.naturalWidth !== 0) draw();
+  </script>
+</body>
+</html>
